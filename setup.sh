@@ -91,8 +91,8 @@ configure_profile() {
     echo "--- Configuring profile: $profile_name ---"
     echo ""
 
-    # Check if AWS profile exists
-    if aws configure list --profile "$profile_name" &>/dev/null 2>&1; then
+    # Check if AWS profile exists in credentials file
+    if grep -q "^\[$profile_name\]" ~/.aws/credentials 2>/dev/null; then
         echo "[✓] AWS profile '$profile_name' already exists in ~/.aws/credentials"
         read -p "    Reconfigure AWS credentials for this profile? (y/n) [n]: " reconfig
         reconfig="${reconfig:-n}"
@@ -109,18 +109,20 @@ configure_profile() {
         read -p "  AWS Region [us-east-1]: " aws_region
         aws_region="${aws_region:-us-east-1}"
 
-        # Write AWS credentials
+        # Write AWS credentials using env vars to avoid shell interpolation issues
         mkdir -p ~/.aws
-        # Use python to safely update the credentials file
+        AWS_KEY="$aws_key" AWS_SECRET="$aws_secret" AWS_REGION_VAL="$aws_region" \
+        PROFILE_NAME="$profile_name" \
         "$SKILL_DIR/.venv/bin/python" -c "
 import configparser, os
+profile = os.environ['PROFILE_NAME']
 creds = configparser.ConfigParser()
 creds_path = os.path.expanduser('~/.aws/credentials')
 if os.path.exists(creds_path):
     creds.read(creds_path)
-creds['$profile_name'] = {
-    'aws_access_key_id': '$aws_key',
-    'aws_secret_access_key': '$aws_secret',
+creds[profile] = {
+    'aws_access_key_id': os.environ['AWS_KEY'],
+    'aws_secret_access_key': os.environ['AWS_SECRET'],
 }
 with open(creds_path, 'w') as f:
     creds.write(f)
@@ -129,8 +131,8 @@ config = configparser.ConfigParser()
 config_path = os.path.expanduser('~/.aws/config')
 if os.path.exists(config_path):
     config.read(config_path)
-section = 'profile $profile_name' if '$profile_name' != 'default' else 'default'
-config[section] = {'region': '$aws_region', 'output': 'json'}
+section = f'profile {profile}' if profile != 'default' else 'default'
+config[section] = {'region': os.environ['AWS_REGION_VAL'], 'output': 'json'}
 with open(config_path, 'w') as f:
     config.write(f)
 "
