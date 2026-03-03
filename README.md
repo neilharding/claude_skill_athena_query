@@ -5,7 +5,7 @@ A Claude Code skill that enables Claude to execute SQL queries against AWS Athen
 ## Installation
 
 ```bash
-git clone <repo-url> ~/.claude/skills/athena-query
+git clone https://github.com/neilharding/claude_skill_athena_query.git ~/.claude/skills/athena-query
 cd ~/.claude/skills/athena-query
 ./setup.sh
 ```
