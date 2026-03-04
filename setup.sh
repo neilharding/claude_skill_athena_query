@@ -268,11 +268,14 @@ if $FOUND_ANY; then
                     keep_athena_settings "$pname"
                     echo "  [✓] Keeping '$pname' as-is"
                 else
-                    echo "  AWS credentials exist but Athena settings are missing."
-                    configure_athena_settings "$pname"
+                    read -p "  Would you like to create an Athena config for '$pname'? (y/n) [y]: " setup_athena
+                    setup_athena="${setup_athena:-y}"
+                    if [ "$setup_athena" = "y" ]; then
+                        configure_athena_settings "$pname"
+                    fi
                 fi
             else
-                # User wants to modify — ask about AWS creds and Athena settings
+                # User wants to modify — ask about AWS creds
                 if $has_aws; then
                     read -p "  Reconfigure AWS credentials for '$pname'? (y/n) [n]: " reconfig_aws
                     reconfig_aws="${reconfig_aws:-n}"
@@ -280,7 +283,22 @@ if $FOUND_ANY; then
                 else
                     configure_aws_creds "$pname"
                 fi
-                configure_athena_settings "$pname"
+                # Ask about Athena settings with create/update language
+                if $has_athena; then
+                    read -p "  Would you like to update Athena config for '$pname'? (y/n) [y]: " setup_athena
+                    setup_athena="${setup_athena:-y}"
+                    if [ "$setup_athena" = "y" ]; then
+                        configure_athena_settings "$pname"
+                    else
+                        keep_athena_settings "$pname"
+                    fi
+                else
+                    read -p "  Would you like to create an Athena config for '$pname'? (y/n) [y]: " setup_athena
+                    setup_athena="${setup_athena:-y}"
+                    if [ "$setup_athena" = "y" ]; then
+                        configure_athena_settings "$pname"
+                    fi
+                fi
             fi
 
             # Set default profile (first one kept/configured, prefer dev)
@@ -314,7 +332,13 @@ if $FOUND_ANY; then
                     else
                         configure_aws_creds "$pname"
                     fi
-                    configure_athena_settings "$pname"
+                    read -p "  Would you like to update Athena config for '$pname'? (y/n) [y]: " setup_athena
+                    setup_athena="${setup_athena:-y}"
+                    if [ "$setup_athena" = "y" ]; then
+                        configure_athena_settings "$pname"
+                    else
+                        keep_athena_settings "$pname"
+                    fi
                 fi
                 echo ""
             fi
